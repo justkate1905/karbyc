@@ -23,9 +23,9 @@ namespace Logic
 	typedef std::wstring str_t;
 	typedef str_t::iterator str_t_it;
 
-	//структура хранения переменных в компиляторе
-	//addr - адрес переменной в исполняемом файле
-	//name - имя переменной в исходном коде
+	//СЃС‚СЂСѓРєС‚СѓСЂР° С…СЂР°РЅРµРЅРёСЏ РїРµСЂРµРјРµРЅРЅС‹С… РІ РєРѕРјРїРёР»СЏС‚РѕСЂРµ
+	//addr - Р°РґСЂРµСЃ РїРµСЂРµРјРµРЅРЅРѕР№ РІ РёСЃРїРѕР»РЅСЏРµРјРѕРј С„Р°Р№Р»Рµ
+	//name - РёРјСЏ РїРµСЂРµРјРµРЅРЅРѕР№ РІ РёСЃС…РѕРґРЅРѕРј РєРѕРґРµ
 	struct variables{
 		int addr = 0;
 		int buff_addr;
@@ -35,16 +35,16 @@ namespace Logic
 		str_t name_buff;
 	};
 	
-	//структура представления операндов математических операций
-	//first - первый операнд
-	//second - второй операнд
+	//СЃС‚СЂСѓРєС‚СѓСЂР° РїСЂРµРґСЃС‚Р°РІР»РµРЅРёСЏ РѕРїРµСЂР°РЅРґРѕРІ РјР°С‚РµРјР°С‚РёС‡РµСЃРєРёС… РѕРїРµСЂР°С†РёР№
+	//first - РїРµСЂРІС‹Р№ РѕРїРµСЂР°РЅРґ
+	//second - РІС‚РѕСЂРѕР№ РѕРїРµСЂР°РЅРґ
 	struct operand{
 		int first;
 		int second;
 	};
 	
 	
-	//структура представления простых арифметических операций
+	//СЃС‚СЂСѓРєС‚СѓСЂР° РїСЂРµРґСЃС‚Р°РІР»РµРЅРёСЏ РїСЂРѕСЃС‚С‹С… Р°СЂРёС„РјРµС‚РёС‡РµСЃРєРёС… РѕРїРµСЂР°С†РёР№
 	struct signs{
 		int PLUS = 0x1003;
 		int MINUS = 0x1007;
@@ -56,42 +56,42 @@ namespace Logic
 	template <typename Iterator>
 	class RulesGrammar : public qi::grammar <Iterator,  qi::space_type >
 	{
-		//переменные
+		//РїРµСЂРµРјРµРЅРЅС‹Рµ
 		variables v;
-		//мат.операции
+		//РјР°С‚.РѕРїРµСЂР°С†РёРё
 		signs s;
-		//операнды
+		//РѕРїРµСЂР°РЅРґС‹
 		operand op_term, op_factor;
-		//переменные для хранения значения переменных, типа данных и флага переменная-число
+		//РїРµСЂРµРјРµРЅРЅС‹Рµ РґР»СЏ С…СЂР°РЅРµРЅРёСЏ Р·РЅР°С‡РµРЅРёСЏ РїРµСЂРµРјРµРЅРЅС‹С…, С‚РёРїР° РґР°РЅРЅС‹С… Рё С„Р»Р°РіР° РїРµСЂРµРјРµРЅРЅР°СЏ-С‡РёСЃР»Рѕ
 		int num=0, type = 0x00AB, var_flag=0, buff_flag=0, count_op = 0;
 		
 		std::string var_name = " ", math_exp, str_value, sign, name1;
-		//вектор кодов операций
+		//РІРµРєС‚РѕСЂ РєРѕРґРѕРІ РѕРїРµСЂР°С†РёР№
 		vector <size_opcode> opcodes;
 		vector<int> stack, var_stack; 
-		//словарь всех переменных
+		//СЃР»РѕРІР°СЂСЊ РІСЃРµС… РїРµСЂРµРјРµРЅРЅС‹С…
 		map<str_t, int> var_v;
-		//вектор опкодов математического выражения в обратной польской записи		
+		//РІРµРєС‚РѕСЂ РѕРїРєРѕРґРѕРІ РјР°С‚РµРјР°С‚РёС‡РµСЃРєРѕРіРѕ РІС‹СЂР°Р¶РµРЅРёСЏ РІ РѕР±СЂР°С‚РЅРѕР№ РїРѕР»СЊСЃРєРѕР№ Р·Р°РїРёСЃРё		
 		vector<int> math_reverse_form;
-		//объявление правил
+		//РѕР±СЉСЏРІР»РµРЅРёРµ РїСЂР°РІРёР»
 		qi::rule<Iterator, qi::space_type> start_programm, programm, name, variable, associate, binding, uint_bind, double_bind,char_bind,expression, term,factor,cond, start_prog, condition, operations, stream, init,id;
 
 	public:
 		RulesGrammar() : RulesGrammar::base_type(start_programm)
 		{
-				//начало программы
+				//РЅР°С‡Р°Р»Рѕ РїСЂРѕРіСЂР°РјРјС‹
 				start_programm = qi::lit("start")[boost::bind(&RulesGrammar::PushOpcode, this, 0x00A1)] 
 								>>'('>>qi::char_(')')>>qi::char_('{')>>programm>>'}';
-				//программа начинается с объявления переменных, либо есть, либо нет				
+				//РїСЂРѕРіСЂР°РјРјР° РЅР°С‡РёРЅР°РµС‚СЃСЏ СЃ РѕР±СЉСЏРІР»РµРЅРёСЏ РїРµСЂРµРјРµРЅРЅС‹С…, Р»РёР±Рѕ РµСЃС‚СЊ, Р»РёР±Рѕ РЅРµС‚				
 				programm = -(qi::lit("var")>>variable>>*(','>>variable) >> ';')>>start_prog;
-				//объявление переменной + возможная инициализация
+				//РѕР±СЉСЏРІР»РµРЅРёРµ РїРµСЂРµРјРµРЅРЅРѕР№ + РІРѕР·РјРѕР¶РЅР°СЏ РёРЅРёС†РёР°Р»РёР·Р°С†РёСЏ
 				variable = (name[boost::bind(&RulesGrammar::PushOpcode, this, 0x00AB)]
 								[boost::bind(&RulesGrammar::PushVar, this)]
 								[boost::bind(&RulesGrammar::PushOpcode, this, 1)]
 								[boost::bind(&RulesGrammar::PushOpcode, this, 0)]
 								>> -(init))
 								[boost::bind(&RulesGrammar::PushVarNum, this)];
-				//операция присваивания
+				//РѕРїРµСЂР°С†РёСЏ РїСЂРёСЃРІР°РёРІР°РЅРёСЏ
 				associate = (qi::char_('=') >> (expression
 												[boost::bind(&RulesGrammar::Resolve, this)]
 												[boost::bind(&RulesGrammar::PushOpcode, this, 0x3001)]
@@ -103,33 +103,33 @@ namespace Logic
 												[boost::bind(&RulesGrammar::SetBuffName, this)]
 												[boost::bind(&RulesGrammar::PushBuffAddr, this)]
 												));
-				//инициализация
+				//РёРЅРёС†РёР°Р»РёР·Р°С†РёСЏ
 				init = qi::char_('=') >> binding;
-				//определение инициалзируемого значения
+				//РѕРїСЂРµРґРµР»РµРЅРёРµ РёРЅРёС†РёР°Р»Р·РёСЂСѓРµРјРѕРіРѕ Р·РЅР°С‡РµРЅРёСЏ
 				binding = ( uint_bind|double_bind |'"'
 							>>char_bind>> *(qi::char_("0-9a-zA-Z")
 											[phx::bind(&RulesGrammar::PushOpcode, this, qi::_1)]
 											[boost::bind(&RulesGrammar::Increase, this)]) >>'"');
-				//беззнаковое целое
+				//Р±РµР·Р·РЅР°РєРѕРІРѕРµ С†РµР»РѕРµ
 				uint_bind = int_[boost::bind(&RulesGrammar::TakeStack, this, 0x00AB)]
 							[boost::bind(&RulesGrammar::PushOpcode, this, this->v.var_num)]
 							[phx::bind(&RulesGrammar::PushOpcode, this, qi::_1)];
-				//дробное 
+				//РґСЂРѕР±РЅРѕРµ 
 				double_bind = double_[boost::bind(&RulesGrammar::TakeStack, this, 0x00AB)]
 							[boost::bind(&RulesGrammar::PushOpcode, this, this->v.var_num)]
 							[phx::bind(&RulesGrammar::PushOpcode, this, qi::_1)];
-				//символьное
+				//СЃРёРјРІРѕР»СЊРЅРѕРµ
 				char_bind = qi::char_[boost::bind(&RulesGrammar::TakeStack, this, 0x00AC)]
 							[boost::bind(&RulesGrammar::PushOpcode, this, 1)]
 							[phx::bind(&RulesGrammar::PushOpcode, this, qi::_1)]; 
-				//имя переменной
+				//РёРјСЏ РїРµСЂРµРјРµРЅРЅРѕР№
 				name = qi::as_wstring[+(qi::alpha|'_')>> *(qi::alnum|'_')]
 						[phx::bind(&RulesGrammar::SetName, this, qi::_1)]; 
 				
-				//виды возможных команд
-				//условия, математические операции, операции вывода
+				//РІРёРґС‹ РІРѕР·РјРѕР¶РЅС‹С… РєРѕРјР°РЅРґ
+				//СѓСЃР»РѕРІРёСЏ, РјР°С‚РµРјР°С‚РёС‡РµСЃРєРёРµ РѕРїРµСЂР°С†РёРё, РѕРїРµСЂР°С†РёРё РІС‹РІРѕРґР°
 				start_prog = *((condition | stream|operations));
-				//операция вывода
+				//РѕРїРµСЂР°С†РёСЏ РІС‹РІРѕРґР°
 				stream = qi::lit("out")
 						>> (name[boost::bind(&RulesGrammar::PushOpcode, this, 0x00C8)]
 								[boost::bind(&RulesGrammar::SetBuffName, this)] 
@@ -142,15 +142,15 @@ namespace Logic
 							>> *(qi::char_[phx::bind(&RulesGrammar::SetNum, this, qi::_1)]
 											[boost::bind(&RulesGrammar::PushValue, this)])>>'"') )
 						  >> ';';
-				//математические операции
+				//РјР°С‚РµРјР°С‚РёС‡РµСЃРєРёРµ РѕРїРµСЂР°С†РёРё
 				operations = name [boost::bind(&RulesGrammar::SetBuffName, this)] >> associate 							
 							// | formules | ("\" " >> *(alpha|alnum|blank|lower|upper|"_"|)));
 							>>';';
-				//условия
+				//СѓСЃР»РѕРІРёСЏ
 				condition = qi::lit("if")>>'('>>cond>>')'>>qi::char_('{')>>start_prog >> '}';
-				//условные выражения
+				//СѓСЃР»РѕРІРЅС‹Рµ РІС‹СЂР°Р¶РµРЅРёСЏ
 				cond = name >> ((('>'|qi::lit(">=")|'<'|qi::lit("<="))>>(int_|double_))|"==">>(int_|double_|('"'>>*(qi::char_)>>'"'))); 
-				//парсинг математических выражений
+				//РїР°СЂСЃРёРЅРі РјР°С‚РµРјР°С‚РёС‡РµСЃРєРёС… РІС‹СЂР°Р¶РµРЅРёР№
 				expression = term [boost::bind(&RulesGrammar::CheckSetTerm, this,1)]  >> 
 							*((qi::char_('-') >> term[boost::bind(&RulesGrammar::CheckSetTerm, this,2)])
 									[boost::bind(&RulesGrammar::SetSign, this, 1,2)]
@@ -162,7 +162,7 @@ namespace Logic
 									[boost::bind(&RulesGrammar::SetFlag, this,0)]
 									[boost::bind(&RulesGrammar::CheckSetTerm, this,1)]
 									[boost::bind(&RulesGrammar::CheckAndSetOpcodeTerm, this)]);
-                //обработка умножения и деления
+                //РѕР±СЂР°Р±РѕС‚РєР° СѓРјРЅРѕР¶РµРЅРёСЏ Рё РґРµР»РµРЅРёСЏ
 				term       =  factor[boost::bind(&RulesGrammar::CheckSetFactor, this,1)]
 									>> 
 							*( ('*' >> factor[boost::bind(&RulesGrammar::CheckSetFactor, this,2)])
@@ -178,7 +178,7 @@ namespace Logic
 							| qi::uint_[phx::bind(&RulesGrammar::SetMath, this, qi::_1)]
                            |  '(' >> expression >> ')' );
 		}
-		//установка числового значения
+		//СѓСЃС‚Р°РЅРѕРІРєР° С‡РёСЃР»РѕРІРѕРіРѕ Р·РЅР°С‡РµРЅРёСЏ
 		void SetNum(int i){
 			num =i;
 		}
@@ -212,22 +212,22 @@ namespace Logic
 			
 			
 		}
-		//установка типа
+		//СѓСЃС‚Р°РЅРѕРІРєР° С‚РёРїР°
 //		void SetType(int i){
 //			v.type =i;
 //		}
-		//установка имени переменной
+		//СѓСЃС‚Р°РЅРѕРІРєР° РёРјРµРЅРё РїРµСЂРµРјРµРЅРЅРѕР№
 		void SetName(str_t name){
 			v.name = name;
 		}
-		//установка флага переменная-число
+		//СѓСЃС‚Р°РЅРѕРІРєР° С„Р»Р°РіР° РїРµСЂРµРјРµРЅРЅР°СЏ-С‡РёСЃР»Рѕ
 		void SetFlag(int val){
 			var_flag = val;
 		}
 		void SetBuffFlag(int val){
 			buff_flag = val;
 		}
-		//установка адреса переменной
+		//СѓСЃС‚Р°РЅРѕРІРєР° Р°РґСЂРµСЃР° РїРµСЂРµРјРµРЅРЅРѕР№
 		void SetAddr(int address){
 			v.addr = address;
 		}
@@ -243,21 +243,21 @@ namespace Logic
 		void SetOp(vector<int> opcode){
 			opcodes = opcode;
 		}
-		//запись в вектор обратной польской записи числового значения
+		//Р·Р°РїРёСЃСЊ РІ РІРµРєС‚РѕСЂ РѕР±СЂР°С‚РЅРѕР№ РїРѕР»СЊСЃРєРѕР№ Р·Р°РїРёСЃРё С‡РёСЃР»РѕРІРѕРіРѕ Р·РЅР°С‡РµРЅРёСЏ
 		void SetMath(int val){
 			SetFlag(0);
 			math_reverse_form.push_back(val);
 			cout<<"=========================="<<endl;
 			cout<<math_reverse_form.back()<<endl;
 		}
-		//установка опкодов математических операций
+		//СѓСЃС‚Р°РЅРѕРІРєР° РѕРїРєРѕРґРѕРІ РјР°С‚РµРјР°С‚РёС‡РµСЃРєРёС… РѕРїРµСЂР°С†РёР№
 		void SetSignStruct(int plus, int minus, int multi, int div){
 			s.PLUS = plus;
 			s.MINUS = minus;
 			s.MULTI = multi;
 			s.DIV = div;
 		}
-		//запись в вектор ОПЗ опкодов мат.операций
+		//Р·Р°РїРёСЃСЊ РІ РІРµРєС‚РѕСЂ РћРџР— РѕРїРєРѕРґРѕРІ РјР°С‚.РѕРїРµСЂР°С†РёР№
 		void SetSign(int op_sign, int f){
 			switch(f){
 				case 1:
@@ -285,19 +285,19 @@ namespace Logic
 			cout<<math_reverse_form.back()<<endl;
 		}
 		
-		//доступ к словарю переменных
+		//РґРѕСЃС‚СѓРї Рє СЃР»РѕРІР°СЂСЋ РїРµСЂРµРјРµРЅРЅС‹С…
 		map<str_t, int> GetVar(){
 			return var_v;
 		}
-		//доступ к вектору опкодов
+		//РґРѕСЃС‚СѓРї Рє РІРµРєС‚РѕСЂСѓ РѕРїРєРѕРґРѕРІ
 		vector <size_opcode> GetOp(){
 			return opcodes;
 		}
-		//Доступ к вектору ОПЗ
+		//Р”РѕСЃС‚СѓРї Рє РІРµРєС‚РѕСЂСѓ РћРџР—
 		vector<int> GetMath(){
 			return math_reverse_form;
 		}
-		//проверка номера операнда и определения типа (переменная или число) по флагу
+		//РїСЂРѕРІРµСЂРєР° РЅРѕРјРµСЂР° РѕРїРµСЂР°РЅРґР° Рё РѕРїСЂРµРґРµР»РµРЅРёСЏ С‚РёРїР° (РїРµСЂРµРјРµРЅРЅР°СЏ РёР»Рё С‡РёСЃР»Рѕ) РїРѕ С„Р»Р°РіСѓ
 		void CheckSetTerm(int num){
 			cout<<"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"<<endl;
 			cout<< var_flag<<endl;
@@ -324,7 +324,7 @@ namespace Logic
 			}
 			//var_flag = 0;
 		}
-		//установка опкодов мат.операций в зависимости от операндов
+		//СѓСЃС‚Р°РЅРѕРІРєР° РѕРїРєРѕРґРѕРІ РјР°С‚.РѕРїРµСЂР°С†РёР№ РІ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ РѕРїРµСЂР°РЅРґРѕРІ
 		void CheckAndSetOpcodeTerm(){
 			if(op_term.first==0){
 				if(op_term.second==0){
@@ -363,7 +363,7 @@ namespace Logic
 		}
 		
 		
-		//ахождение адреса переменной
+		//Р°С…РѕР¶РґРµРЅРёРµ Р°РґСЂРµСЃР° РїРµСЂРµРјРµРЅРЅРѕР№
 		int FindVarVal(str_t val){
 			auto map<str_t,int>::iterator it = var_v.find(val);
 			if(it != var_v.end()){
@@ -373,11 +373,11 @@ namespace Logic
 				return -1;
 			}
 		}
-		//запись адреса переменной в вектор опкодов
+		//Р·Р°РїРёСЃСЊ Р°РґСЂРµСЃР° РїРµСЂРµРјРµРЅРЅРѕР№ РІ РІРµРєС‚РѕСЂ РѕРїРєРѕРґРѕРІ
 		void PushAddr(std::string val){
 			opcodes.push_back(FindVarVal(val));
 		}
-		//запись опкода в вектор
+		//Р·Р°РїРёСЃСЊ РѕРїРєРѕРґР° РІ РІРµРєС‚РѕСЂ
 		void PushOpcode(int opcode){
 			opcodes.push_back(opcode);			
 		}
@@ -388,7 +388,7 @@ namespace Logic
 				math_reverse_form.pop_back();	
 			}
 		}
-		//установка флага переменная-число и запись адреса в вектор с ОПЗ
+		//СѓСЃС‚Р°РЅРѕРІРєР° С„Р»Р°РіР° РїРµСЂРµРјРµРЅРЅР°СЏ-С‡РёСЃР»Рѕ Рё Р·Р°РїРёСЃСЊ Р°РґСЂРµСЃР° РІ РІРµРєС‚РѕСЂ СЃ РћРџР—
 		void PushName(){
 			SetFlag(1);
 			//int index = FindVarVal(v.name)/sizeof(size_opcode) - 3;
@@ -397,12 +397,12 @@ namespace Logic
 			cout<<math_reverse_form.back()<<endl;
 		}
 
-		//запись в вектор опкодов числа
+		//Р·Р°РїРёСЃСЊ РІ РІРµРєС‚РѕСЂ РѕРїРєРѕРґРѕРІ С‡РёСЃР»Р°
 		void PushValue(){
 			opcodes.push_back(num);
 			num = 0;
 		}	
-		//добавление в словарь записи типа Имя_переменной, адрес
+		//РґРѕР±Р°РІР»РµРЅРёРµ РІ СЃР»РѕРІР°СЂСЊ Р·Р°РїРёСЃРё С‚РёРїР° РРјСЏ_РїРµСЂРµРјРµРЅРЅРѕР№, Р°РґСЂРµСЃ
 		void PushVar()
 		{
 			int addr = (4 + opcodes.size()-1)*sizeof(size_opcode);
