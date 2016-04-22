@@ -1,0 +1,5 @@
+start(){
+	var a = 5,b,c="Hello";
+	b = a+5;
+	out "мир";
+}
