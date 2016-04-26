@@ -5,7 +5,7 @@ using namespace Logic;
 
 const int i = 1;
 #define is_bigendian() ( (*(char*)&i) == 0 )
-	//функция по определению порядка записи байтов для корректной записи кодов операций в бинарный файл
+	//С„СѓРЅРєС†РёСЏ РїРѕ РѕРїСЂРµРґРµР»РµРЅРёСЋ РїРѕСЂСЏРґРєР° Р·Р°РїРёСЃРё Р±Р°Р№С‚РѕРІ РґР»СЏ РєРѕСЂСЂРµРєС‚РЅРѕР№ Р·Р°РїРёСЃРё РєРѕРґРѕРІ РѕРїРµСЂР°С†РёР№ РІ Р±РёРЅР°СЂРЅС‹Р№ С„Р°Р№Р»
 int reverseInt(int s) {
 	char c1, c2, c3, c4;
 	int c5;
@@ -24,6 +24,7 @@ int reverseInt(int s) {
 	//using namespace qi;
 int main(int argc, char* argv[])
 {
+		setlocale(0,"");
 		FILE *file;
 		char* name = "file.txt";
 		char* binary; 
@@ -40,22 +41,22 @@ int main(int argc, char* argv[])
 				binary = "binary.bin";
 			}
 		}
-		wifstream f(name);
+		ifstream f(name);
 		if(!f.is_open()){
-			wcout<< "This file is not exist!"<<endl;
+			cout<< "This file is not exist!"<<endl;
 			f.close();
 			}
 		else{
 			str_t S,str;
 			while(!f.eof()){
 				getline(f,S);
-				if(S.find_first_not_of(L"\t")!=0){
+				if(S.find_first_not_of("\t")!=0){
 					//S=S.substr(S.find_first_not_of("\t"));
 				}
 				str+= S;
 				str+=(wchar_t)(' ');
 			}
-			wcout<<str<<endl;
+			cout<<str<<endl;
 			vector<size_opcode> opcode(4);
 			vector<variables> var_v;
 		
@@ -65,7 +66,7 @@ int main(int argc, char* argv[])
 					if(success && begin == end)
 							std::cout << "Parsing succeeded\n";
 					else
-							std::wcout << "Parsing failed\nstopped at: " <<"\""
+							std::cout << "Parsing failed\nstopped at: " <<"\""
 									  << str_t(begin, end) << "\"\n";
 			
 			for(int i =0; i<rulesGrammar.GetOp().size(); i++){

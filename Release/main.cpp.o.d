@@ -1601,7 +1601,18 @@ Release/main.cpp.o: main.cpp RulesGrammar.h \
  C:/boost_1_53_0/boost/fusion/iterator/basic_iterator.hpp \
  C:/boost_1_53_0/boost/fusion/adapted/struct/detail/end_impl.hpp \
  C:/boost_1_53_0/boost/fusion/adapted/struct/detail/value_of_impl.hpp \
- C:/boost_1_53_0/boost/fusion/adapted/struct/detail/deref_impl.hpp
+ C:/boost_1_53_0/boost/fusion/adapted/struct/detail/deref_impl.hpp \
+ C:/boost_1_53_0/boost/spirit/include/support_utree.hpp \
+ C:/boost_1_53_0/boost/spirit/home/support/utree.hpp \
+ C:/boost_1_53_0/boost/spirit/home/support/utree/utree.hpp \
+ C:/boost_1_53_0/boost/io/ios_state.hpp C:/boost_1_53_0/boost/io_fwd.hpp \
+ C:/boost_1_53_0/boost/type_traits/is_polymorphic.hpp \
+ C:/boost_1_53_0/boost/spirit/home/support/utree/detail/utree_detail1.hpp \
+ C:/boost_1_53_0/boost/spirit/home/support/utree/operators.hpp \
+ C:/boost_1_53_0/boost/spirit/home/support/utree/detail/utree_detail2.hpp \
+ C:/boost_1_53_0/boost/spirit/home/support/utree/utree_traits.hpp \
+ C:/boost_1_53_0/boost/spirit/home/karma/domain.hpp \
+ C:/boost_1_53_0/boost/spirit/home/karma/nonterminal/nonterminal_fwd.hpp
 
 RulesGrammar.h:
 
@@ -4850,3 +4861,27 @@ C:/boost_1_53_0/boost/fusion/adapted/struct/detail/end_impl.hpp:
 C:/boost_1_53_0/boost/fusion/adapted/struct/detail/value_of_impl.hpp:
 
 C:/boost_1_53_0/boost/fusion/adapted/struct/detail/deref_impl.hpp:
+
+C:/boost_1_53_0/boost/spirit/include/support_utree.hpp:
+
+C:/boost_1_53_0/boost/spirit/home/support/utree.hpp:
+
+C:/boost_1_53_0/boost/spirit/home/support/utree/utree.hpp:
+
+C:/boost_1_53_0/boost/io/ios_state.hpp:
+
+C:/boost_1_53_0/boost/io_fwd.hpp:
+
+C:/boost_1_53_0/boost/type_traits/is_polymorphic.hpp:
+
+C:/boost_1_53_0/boost/spirit/home/support/utree/detail/utree_detail1.hpp:
+
+C:/boost_1_53_0/boost/spirit/home/support/utree/operators.hpp:
+
+C:/boost_1_53_0/boost/spirit/home/support/utree/detail/utree_detail2.hpp:
+
+C:/boost_1_53_0/boost/spirit/home/support/utree/utree_traits.hpp:
+
+C:/boost_1_53_0/boost/spirit/home/karma/domain.hpp:
+
+C:/boost_1_53_0/boost/spirit/home/karma/nonterminal/nonterminal_fwd.hpp:

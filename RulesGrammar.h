@@ -5,22 +5,32 @@
 #include <string>
 #include <fstream>
 #include <map>
+#include <locale>
 #include <boost/spirit/include/qi.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/bind.hpp>
 #include <boost/spirit/include/phoenix.hpp>
-#include <boost/fusion/include/adapt_struct.hpp>
+
+#include <boost/locale/encoding_utf.hpp>
 
 namespace Logic
 {
+using boost::locale::conv::utf_to_utf;
 	namespace qi = boost::spirit::qi;
 	namespace ascii = boost::spirit::ascii;
+//	boost::spirit::ascii
+//boost::spirit::iso8859_1
+	//namespace uni = boost::spirit::standard;
+	namespace unicode = boost::spirit::standard_wide;
+	//using namespace uni;
+	using namespace unicode;
+	//using namespace ascii;
 	using namespace std;
 	using namespace qi;
 	using namespace boost::spirit;
 	namespace phx = boost::phoenix;
 	typedef int size_opcode;
-	typedef std::wstring str_t;
+	typedef std::string str_t;
 	typedef str_t::iterator str_t_it;
 
 	//структура хранения переменных в компиляторе
@@ -74,7 +84,7 @@ namespace Logic
 		//вектор опкодов математического выражения в обратной польской записи		
 		vector<int> math_reverse_form;
 		//объявление правил
-		qi::rule<Iterator, qi::space_type> start_programm, programm, name, variable, associate, binding, uint_bind, double_bind,char_bind,expression, term,factor,cond, start_prog, condition, operations, stream, init,id;
+		qi::rule<Iterator, qi::space_type> start_programm, programm, name, variable, associate, binding, uint_bind, double_bind,char_bind,expression, term,factor,cond, start_prog, condition, operations, stream, init,id,strings;
 
 	public:
 		RulesGrammar() : RulesGrammar::base_type(start_programm)
@@ -107,7 +117,7 @@ namespace Logic
 				init = qi::char_('=') >> binding;
 				//определение инициалзируемого значения
 				binding = ( uint_bind|double_bind |'"'
-							>>char_bind>> *(qi::char_("0-9a-zA-Z")
+							>>char_bind>> *(qi::char_ - qi::char_('"')
 											[phx::bind(&RulesGrammar::PushOpcode, this, qi::_1)]
 											[boost::bind(&RulesGrammar::Increase, this)]) >>'"');
 				//беззнаковое целое
@@ -123,12 +133,15 @@ namespace Logic
 							[boost::bind(&RulesGrammar::PushOpcode, this, 1)]
 							[phx::bind(&RulesGrammar::PushOpcode, this, qi::_1)]; 
 				//имя переменной
-				name = qi::as_wstring[+(qi::alpha|'_')>> *(qi::alnum|'_')]
+				name = qi::as_string[+(qi::alpha|'_')>> *(qi::alnum|'_')]
 						[phx::bind(&RulesGrammar::SetName, this, qi::_1)]; 
 				
 				//виды возможных команд
 				//условия, математические операции, операции вывода
 				start_prog = *((condition | stream|operations));
+				strings = qi::as_string[*(qi::char_ - qi::char_('"'))]
+								[phx::bind(&RulesGrammar::Convert, this, qi::_1)];
+								//[boost::bind(&RulesGrammar::PushValue, this)];
 				//операция вывода
 				stream = qi::lit("out")
 						>> (name[boost::bind(&RulesGrammar::PushOpcode, this, 0x00C8)]
@@ -139,8 +152,8 @@ namespace Logic
 							| double_bind[boost::bind(&RulesGrammar::PushOpcode, this, 0x00C9)]
 										[boost::bind(&RulesGrammar::PushValue, this)]  
 							| (qi::lit('"')[boost::bind(&RulesGrammar::PushOpcode, this, 0x00CA)]
-							>> *(qi::char_[phx::bind(&RulesGrammar::SetNum, this, qi::_1)]
-											[boost::bind(&RulesGrammar::PushValue, this)])>>'"') )
+							>> strings
+								>>'"') )
 						  >> ';';
 				//математические операции
 				operations = name [boost::bind(&RulesGrammar::SetBuffName, this)] >> associate 							
@@ -212,6 +225,59 @@ namespace Logic
 			
 			
 		}
+			
+		std::wstring utf8_to_wstring(const std::string& str)
+		{
+			return utf_to_utf<wchar_t>(str.c_str(), str.c_str() + str.size());
+		}
+		std::string wstring_to_utf8(const std::wstring& str)
+		{
+			return utf_to_utf<char>(str.c_str(), str.c_str() + str.size());
+		}  
+		void Convert(std::string str){
+//			switch(CODE){
+//				case 0:
+////					wstring wsstr;
+////					StringToWString(ws,str);
+////					wcout<<wsstr<<endl;
+//					break;
+//				case 1:
+					wstring st = utf8_to_wstring(str);
+					wstring::iterator beg = st.begin(), end = st.end();
+					int count = end - beg;
+					int temp, temp_c = count;
+					cout<<count<<endl;
+					opcodes.push_back(count);
+					while(beg!=end){
+						temp = (short int)(*beg);
+						temp_c--;
+						temp <<= 16;
+						cout<<temp<<endl;	
+						if(count%2==1){
+							if(temp_c!=0){
+							beg++;
+							temp^=(short int)(*(beg));
+							cout<<temp<<endl;	
+							PushOpcode(temp);
+							temp=0;
+							temp_c--;
+							}
+							else{
+								PushOpcode(temp);
+							}
+						}
+						else if(count%2==0){
+							beg++;
+							temp^=(short int)(*(beg));
+							PushOpcode(temp);
+							temp=0;
+							temp_c--;
+						}
+						beg++;
+					}
+					wcout << st << endl;
+			}
+		//}
 		//установка типа
 //		void SetType(int i){
 //			v.type =i;
@@ -322,7 +388,6 @@ namespace Logic
 					op_factor.second = var_flag;
 					break;
 			}
-			//var_flag = 0;
 		}
 		//установка опкодов мат.операций в зависимости от операндов
 		void CheckAndSetOpcodeTerm(){
@@ -434,14 +499,6 @@ namespace Logic
 						stack.push_back(0x00AA);
 						it++;
 						i++;
-					//}
-					/*else{
-						PushOpcode((*it));
-						PushOpcode(0x89AB);
-						PushOpcode(stack.back());
-						stack.pop_back();
-						it++;
-					}*/
 					
 				}
 			}
