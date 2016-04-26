@@ -10,21 +10,19 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/bind.hpp>
 #include <boost/spirit/include/phoenix.hpp>
-
+#include <boost/spirit/include/qi_char_class.hpp>
 #include <boost/locale/encoding_utf.hpp>
+#include <boost/spirit/include/qi_lexeme.hpp>
+#include <boost/spirit/include/qi_raw.hpp>
 
 namespace Logic
 {
-using boost::locale::conv::utf_to_utf;
+	using boost::locale::conv::utf_to_utf;
 	namespace qi = boost::spirit::qi;
 	namespace ascii = boost::spirit::ascii;
-//	boost::spirit::ascii
-//boost::spirit::iso8859_1
-	//namespace uni = boost::spirit::standard;
+	using boost::spirit::ascii::space;
 	namespace unicode = boost::spirit::standard_wide;
-	//using namespace uni;
 	using namespace unicode;
-	//using namespace ascii;
 	using namespace std;
 	using namespace qi;
 	using namespace boost::spirit;
@@ -84,7 +82,7 @@ using boost::locale::conv::utf_to_utf;
 		//вектор опкодов математического выражения в обратной польской записи		
 		vector<int> math_reverse_form;
 		//объявление правил
-		qi::rule<Iterator, qi::space_type> start_programm, programm, name, variable, associate, binding, uint_bind, double_bind,char_bind,expression, term,factor,cond, start_prog, condition, operations, stream, init,id,strings;
+		qi::rule<Iterator, qi::space_type> start_programm, programm, name, variable, associate, binding, uint_bind, double_bind,expression, term,factor,cond, start_prog, condition, operations, stream, init,id,strings;
 
 	public:
 		RulesGrammar() : RulesGrammar::base_type(start_programm)
@@ -99,8 +97,8 @@ using boost::locale::conv::utf_to_utf;
 								[boost::bind(&RulesGrammar::PushVar, this)]
 								[boost::bind(&RulesGrammar::PushOpcode, this, 1)]
 								[boost::bind(&RulesGrammar::PushOpcode, this, 0)]
-								>> -(init))
-								[boost::bind(&RulesGrammar::PushVarNum, this)];
+								>> -(init));
+								//[boost::bind(&RulesGrammar::PushVarNum, this)];
 				//операция присваивания
 				associate = (qi::char_('=') >> (expression
 												[boost::bind(&RulesGrammar::Resolve, this)]
@@ -116,10 +114,11 @@ using boost::locale::conv::utf_to_utf;
 				//инициализация
 				init = qi::char_('=') >> binding;
 				//определение инициалзируемого значения
-				binding = ( uint_bind|double_bind |'"'
-							>>char_bind>> *(qi::char_ - qi::char_('"')
-											[phx::bind(&RulesGrammar::PushOpcode, this, qi::_1)]
-											[boost::bind(&RulesGrammar::Increase, this)]) >>'"');
+				binding = ( uint_bind|double_bind |qi::lit('"') 
+								[boost::bind(&RulesGrammar::TakeStack, this, 0x00AC)]
+							>> strings
+											//[boost::bind(&RulesGrammar::Increase, this)]
+											>>'"');
 				//беззнаковое целое
 				uint_bind = int_[boost::bind(&RulesGrammar::TakeStack, this, 0x00AB)]
 							[boost::bind(&RulesGrammar::PushOpcode, this, this->v.var_num)]
@@ -128,10 +127,6 @@ using boost::locale::conv::utf_to_utf;
 				double_bind = double_[boost::bind(&RulesGrammar::TakeStack, this, 0x00AB)]
 							[boost::bind(&RulesGrammar::PushOpcode, this, this->v.var_num)]
 							[phx::bind(&RulesGrammar::PushOpcode, this, qi::_1)];
-				//символьное
-				char_bind = qi::char_[boost::bind(&RulesGrammar::TakeStack, this, 0x00AC)]
-							[boost::bind(&RulesGrammar::PushOpcode, this, 1)]
-							[phx::bind(&RulesGrammar::PushOpcode, this, qi::_1)]; 
 				//имя переменной
 				name = qi::as_string[+(qi::alpha|'_')>> *(qi::alnum|'_')]
 						[phx::bind(&RulesGrammar::SetName, this, qi::_1)]; 
@@ -139,7 +134,8 @@ using boost::locale::conv::utf_to_utf;
 				//виды возможных команд
 				//условия, математические операции, операции вывода
 				start_prog = *((condition | stream|operations));
-				strings = qi::as_string[*(qi::char_ - qi::char_('"'))]
+				//строковое значение
+				strings = qi::as_string[lexeme[*(qi::char_ - qi::char_('"'))]]
 								[phx::bind(&RulesGrammar::Convert, this, qi::_1)];
 								//[boost::bind(&RulesGrammar::PushValue, this)];
 				//операция вывода
@@ -147,18 +143,18 @@ using boost::locale::conv::utf_to_utf;
 						>> (name[boost::bind(&RulesGrammar::PushOpcode, this, 0x00C8)]
 								[boost::bind(&RulesGrammar::SetBuffName, this)] 
 								[boost::bind(&RulesGrammar::PushBuffAddr, this)]
-							| uint_bind[boost::bind(&RulesGrammar::PushOpcode, this, 0x00C9)]
-										[boost::bind(&RulesGrammar::PushValue, this)] 
-							| double_bind[boost::bind(&RulesGrammar::PushOpcode, this, 0x00C9)]
-										[boost::bind(&RulesGrammar::PushValue, this)]  
+							| int_[boost::bind(&RulesGrammar::PushOpcode, this, 0x00C9)]
+									[phx::bind(&RulesGrammar::PushOpcode, this, qi::_1)]
+										//[boost::bind(&RulesGrammar::PushValue, this)] 
+							| double_[boost::bind(&RulesGrammar::PushOpcode, this, 0x00C9)]
+									[phx::bind(&RulesGrammar::PushOpcode, this, qi::_1)]
+									//	[boost::bind(&RulesGrammar::PushValue, this)]  
 							| (qi::lit('"')[boost::bind(&RulesGrammar::PushOpcode, this, 0x00CA)]
 							>> strings
 								>>'"') )
 						  >> ';';
 				//математические операции
-				operations = name [boost::bind(&RulesGrammar::SetBuffName, this)] >> associate 							
-							// | formules | ("\" " >> *(alpha|alnum|blank|lower|upper|"_"|)));
-							>>';';
+				operations = name [boost::bind(&RulesGrammar::SetBuffName, this)] >> associate >>';';
 				//условия
 				condition = qi::lit("if")>>'('>>cond>>')'>>qi::char_('{')>>start_prog >> '}';
 				//условные выражения
@@ -246,19 +242,20 @@ using boost::locale::conv::utf_to_utf;
 					wstring::iterator beg = st.begin(), end = st.end();
 					int count = end - beg;
 					int temp, temp_c = count;
-					cout<<count<<endl;
+					//cout<<count<<endl;
 					opcodes.push_back(count);
 					while(beg!=end){
 						temp = (short int)(*beg);
 						temp_c--;
 						temp <<= 16;
-						cout<<temp<<endl;	
+						//cout<<std::hex<<temp<<endl;	
 						if(count%2==1){
 							if(temp_c!=0){
 							beg++;
 							temp^=(short int)(*(beg));
-							cout<<temp<<endl;	
+							cout<<std::hex<<temp<<endl;	
 							PushOpcode(temp);
+							cout<<std::hex<<opcodes.back()<<endl;
 							temp=0;
 							temp_c--;
 							}
@@ -270,6 +267,7 @@ using boost::locale::conv::utf_to_utf;
 							beg++;
 							temp^=(short int)(*(beg));
 							PushOpcode(temp);
+							cout<<std::hex<<opcodes.back()<<endl;
 							temp=0;
 							temp_c--;
 						}
