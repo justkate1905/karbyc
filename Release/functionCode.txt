@@ -1,0 +1,24 @@
+deff one(s){
+	var f=6,g=3;
+	f = f+g;
+}
+
+deff two(a,b,s){
+	var hello, c=9;
+	hello = a*4;
+	return hello;
+}
+
+start(){
+	var a = 5,b,c, result;
+	b = (a+3+2)*2;
+	c = (b+2*5)/(a+3*2-4);
+	a = 3-b;
+	one(4);
+	result = two(a,3,4);
+	out result;
+	out a;
+	out b;
+	out c;
+}
+

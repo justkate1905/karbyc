@@ -41,8 +41,25 @@ namespace Logic
 		int var_num = 1;
 		str_t name;
 		str_t name_buff;
+		str_t temp_name;
+		int temp_addr;
+		int funcType = 0;
+	};
+	struct functions{
+		str_t func_name;
+		int funcId;
+		int addr;
+		int param=0;
+		int ret_var=0;
+		short int func_num = 0;
+		vector<str_t> func_param;
 	};
 	
+	struct func_service{
+		str_t name;
+		int addr;
+		int param_num;
+	};
 	//структура представления операндов математических операций
 	//first - первый операнд
 	//second - второй операнд
@@ -66,6 +83,8 @@ namespace Logic
 	{
 		//переменные
 		variables v;
+		functions f;
+		func_service serv;
 		//мат.операции
 		signs s;
 		//операнды
@@ -79,17 +98,61 @@ namespace Logic
 		vector<int> stack, var_stack; 
 		//словарь всех переменных
 		map<str_t, int> var_v;
+		map<str_t, int> func_v;
+		vector <func_service> function_list;
+		vector<size_opcode> params;
 		//вектор опкодов математического выражения в обратной польской записи		
 		vector<int> math_reverse_form;
 		//объявление правил
-		qi::rule<Iterator, qi::space_type> start_programm, programm, name, variable, associate, binding, uint_bind, double_bind,expression, term,factor,cond, start_prog, condition, operations, stream, init,id,strings;
+		qi::rule<Iterator, qi::space_type> start_programm, programm, name, variable,associate, binding,
+											uint_bind, double_bind,expression, term,factor,cond,start_prog, 
+											condition, operations, stream, init,id,strings, functionName,
+											func_defenition, global_prog, param,return_val, call_function,
+											assoc, give_param, int_p;
 
 	public:
-		RulesGrammar() : RulesGrammar::base_type(start_programm)
+		RulesGrammar() : RulesGrammar::base_type(global_prog)
 		{
+				global_prog = *(func_defenition)>> start_programm;
 				//начало программы
-				start_programm = qi::lit("start")[boost::bind(&RulesGrammar::PushOpcode, this, 0x00A1)] 
+				start_programm = qi::lit("start")[boost::bind(&RulesGrammar::PushOpcode, this, 0x00A1)]
+												[boost::bind(&RulesGrammar::SetType, this,0)]
 								>>'('>>qi::char_(')')>>qi::char_('{')>>programm>>'}';
+								
+				func_defenition = qi::lit("deff")[boost::bind(&RulesGrammar::SetType, this,1)]>>
+											functionName[boost::bind(&RulesGrammar::SetFuncProperty, this)] >> '('>> 
+											(-(param % ',' ))[boost::bind(&RulesGrammar::PushParam, this)]	>>')'>>'{'>>
+											programm[boost::bind(&RulesGrammar::PushFuncVars, this)] >>
+											(-(return_val))>>qi::lit('}')[boost::bind(&RulesGrammar::PushOpcode, this, 0x01B0)]
+														[boost::bind(&RulesGrammar::PushCodeSize,this)];
+				return_val  = qi::lit("return")>>(name [boost::bind(&RulesGrammar::PushOpcode,this, 0x01B5)]
+														[boost::bind(&RulesGrammar::SetBuffName,this)]
+														[boost::bind(&RulesGrammar::PushBuffAddr,this)]
+												|expression[boost::bind(&RulesGrammar::PushOpcode,this, 0x01B4)]
+													[boost::bind(&RulesGrammar::PushOpcode,this, 0x00AA)]
+												| int_[boost::bind(&RulesGrammar::PushOpcode,this, 0x01B3)]
+														[phx::bind(&RulesGrammar::PushOpcode, this, qi::_1)])
+												>>qi::lit(';');
+				functionName = qi::as_string[+(qi::alpha|'_')>> *(qi::alnum|'_')]
+								[phx::bind(&RulesGrammar::SetFunctionName, this, qi::_1)];
+								
+				param = (qi::as_string[+(qi::alpha|'_')>> *(qi::alnum|'_')]
+						[phx::bind(&RulesGrammar::ParamToVect, this, qi::_1)]);
+				
+				call_function = functionName >> qi::char_('(')>> -(give_param % ',')>>qi::lit(')')
+											[boost::bind(&RulesGrammar::FuncReview, this)];
+				
+				give_param = (int_p | name
+										[boost::bind(&RulesGrammar::GivetheParams, this, 0x01B2)]
+										[boost::bind(&RulesGrammar::SetTempName,this)]
+										[boost::bind(&RulesGrammar::GiveAddrParam,this)]
+									) [boost::bind(&RulesGrammar::IncreaseParam,this)]; 
+				
+				int_p = (int_[boost::bind(&RulesGrammar::GivetheParams, this, 0x01B1)]
+							[phx::bind(&RulesGrammar::GivetheParams, this, qi::_1)] | 
+						double_[boost::bind(&RulesGrammar::GivetheParams, this, 0x01B1)]
+							[phx::bind(&RulesGrammar::GivetheParams, this, qi::_1)]); 
+				
 				//программа начинается с объявления переменных, либо есть, либо нет				
 				programm = -(qi::lit("var")>>variable>>*(','>>variable) >> ';')>>start_prog;
 				//объявление переменной + возможная инициализация
@@ -100,17 +163,24 @@ namespace Logic
 								>> -(init));
 								//[boost::bind(&RulesGrammar::PushVarNum, this)];
 				//операция присваивания
-				associate = (qi::char_('=') >> (expression
+				associate = (qi::char_('=') >> (call_function 
+												[boost::bind(&RulesGrammar::PushOpcode, this, 0x3001)]
+												[boost::bind(&RulesGrammar::PushBuffAddr, this)]
+												[boost::bind(&RulesGrammar::PushOpcode, this, 0x01B7)]
+												|
+												expression
 												[boost::bind(&RulesGrammar::Resolve, this)]
 												[boost::bind(&RulesGrammar::PushOpcode, this, 0x3001)]
 												[boost::bind(&RulesGrammar::PushBuffAddr, this)]
-												[boost::bind(&RulesGrammar::PushOpcode, this, 0x00AA)] | 
-												name 
-												[boost::bind(&RulesGrammar::PushOpcode, this, 0x3000)]
-												[boost::bind(&RulesGrammar::PushBuffAddr, this)]
-												[boost::bind(&RulesGrammar::SetBuffName, this)]
-												[boost::bind(&RulesGrammar::PushBuffAddr, this)]
+												[boost::bind(&RulesGrammar::PushOpcode, this, 0x00AA)]
 												));
+				assoc = (qi::lit('=')>> (name 
+										[boost::bind(&RulesGrammar::PushOpcode, this, 0x3000)]
+										[boost::bind(&RulesGrammar::PushBuffAddr, this)]
+										[boost::bind(&RulesGrammar::SetBuffName, this)]
+										[boost::bind(&RulesGrammar::PushBuffAddr, this)] |
+										int_ [boost::bind(&RulesGrammar::PushOpcode, this, 0x3001)]
+											[phx::bind(&RulesGrammar::PushOpcode, this, qi::_1)]));
 				//инициализация
 				init = qi::char_('=') >> binding;
 				//определение инициалзируемого значения
@@ -130,10 +200,10 @@ namespace Logic
 				//имя переменной
 				name = qi::as_string[+(qi::alpha|'_')>> *(qi::alnum|'_')]
 						[phx::bind(&RulesGrammar::SetName, this, qi::_1)]; 
-				
+
 				//виды возможных команд
 				//условия, математические операции, операции вывода
-				start_prog = *((condition | stream|operations));
+				start_prog = *((condition | stream |operations | call_function >>';'));
 				//строковое значение
 				strings = qi::as_string[lexeme[*(qi::char_ - qi::char_('"'))]]
 								[phx::bind(&RulesGrammar::Convert, this, qi::_1)];
@@ -154,7 +224,7 @@ namespace Logic
 								>>'"') )
 						  >> ';';
 				//математические операции
-				operations = name [boost::bind(&RulesGrammar::SetBuffName, this)] >> associate >>';';
+				operations = name [boost::bind(&RulesGrammar::SetBuffName, this)] >> (associate | assoc) >>';';
 				//условия
 				condition = qi::lit("if")>>'('>>cond>>')'>>qi::char_('{')>>start_prog >> '}';
 				//условные выражения
@@ -191,12 +261,75 @@ namespace Logic
 		void SetNum(int i){
 			num =i;
 		}
+		void PushFuncVars(){
+			vector<size_opcode>::iterator funcIt = find(opcodes.begin(), opcodes.end(), f.funcId);
+			opcodes.at(funcIt - opcodes.begin()+2) = func_v.size();
+		}
+		void PushCodeSize(){
+			vector<size_opcode>::iterator funcBeg = find(opcodes.begin(), opcodes.end(), f.funcId);
+			opcodes.at(funcBeg - opcodes.begin()+3) = (opcodes.end()-funcBeg-4)*sizeof(size_opcode);
+			f.func_param.clear();
+			func_v.clear();
+		}
+		void GivetheParams(size_opcode par){
+			params.push_back(par);
+		}
+		void SetTempName(){
+			v.temp_name = v.name;
+			v.temp_addr = FindVarVal(v.temp_name);
+		}
+		void GiveAddrParam(){
+			params.push_back(v.temp_addr);
+		}
+		void PushParam(){
+			serv.param_num = f.func_param.size();
+			PushOpcode(serv.param_num);
+			function_list.push_back(serv);
+			PushOpcode(0);
+			PushOpcode(0);
+			f.param = 0;
+		} 
+		
+		void FuncReview(){
+			vector<func_service>::iterator beg = function_list.begin(), end = function_list.end();
+			vector<size_opcode>::iterator it = params.begin(), end_p = params.end();
+			while(beg!=end){
+				cout << "~~~ "<<f.func_name<<" ~~~"<<endl;
+				if((*beg).name == f.func_name){
+					cout << "~~~ "<< (*beg).name<<" ~~~"<<endl;
+					cout << "params "<< f.param<<" ~~~"<<endl;
+					if((*beg).param_num == f.param){
+						
+						PushOpcode(0x01B6);
+						PushOpcode(f.param);
+						while(it!=end_p){
+							PushOpcode((*it));
+							it++;
+						}
+						PushOpcode((*beg).addr);
+						f.param = 0;
+						break;
+					}
+				}
+				beg++;
+			}
+			params.clear();
+			
+		}
+		
 		void SetVarStack(int i){
 			var_stack.push_back(i);
 		}
 		
+		void ParamToVect(str_t p){
+			f.func_param.push_back(p);
+		}
+		
 		void Increase(){
 			v.var_num++;
+		}
+		void IncreaseParam(){
+			f.param++;
 		}
 		void PushVarNum(){
 			int i = opcodes.size();
@@ -231,13 +364,6 @@ namespace Logic
 			return utf_to_utf<char>(str.c_str(), str.c_str() + str.size());
 		}  
 		void Convert(std::string str){
-//			switch(CODE){
-//				case 0:
-////					wstring wsstr;
-////					StringToWString(ws,str);
-////					wcout<<wsstr<<endl;
-//					break;
-//				case 1:
 					wstring st = utf8_to_wstring(str);
 					wstring::iterator beg = st.begin(), end = st.end();
 					int count = end - beg;
@@ -253,9 +379,9 @@ namespace Logic
 							if(temp_c!=0){
 							beg++;
 							temp^=(short int)(*(beg));
-							cout<<std::hex<<temp<<endl;	
+							//cout<<std::hex<<temp<<endl;	
 							PushOpcode(temp);
-							cout<<std::hex<<opcodes.back()<<endl;
+							//<<std::hex<<opcodes.back()<<endl;
 							temp=0;
 							temp_c--;
 							}
@@ -267,7 +393,7 @@ namespace Logic
 							beg++;
 							temp^=(short int)(*(beg));
 							PushOpcode(temp);
-							cout<<std::hex<<opcodes.back()<<endl;
+							//cout<<std::hex<<opcodes.back()<<endl;
 							temp=0;
 							temp_c--;
 						}
@@ -275,14 +401,33 @@ namespace Logic
 					}
 					wcout << st << endl;
 			}
-		//}
 		//установка типа
-//		void SetType(int i){
-//			v.type =i;
-//		}
+		void SetType(int i){
+			v.funcType =i;
+			cout<<v.funcType<<endl;
+		}
+		int GetType(){
+			return v.funcType;
+			//cout<<v.funcType<<endl;
+		}
 		//установка имени переменной
 		void SetName(str_t name){
 			v.name = name;
+			//cout<<"name: "<<v.name<<endl;
+		}
+		void SetFunctionName(str_t name){
+			f.func_name = name;
+		}
+		void SetFuncProperty(){
+			f.func_num++;
+			f.funcId = 0x00A1 + 0x0100*(f.func_num);
+			PushOpcode(f.funcId);
+			f.addr = (4 + opcodes.size()-1)*sizeof(size_opcode);
+			serv.addr = f.addr;
+			serv.name = f.func_name;
+			//cout<<"~~~ "<<f.addr<<" ~~~"<<endl;
+			//function_list.insert(pair<str_t,int>(f.func_name, f.addr));
+			
 		}
 		//установка флага переменная-число
 		void SetFlag(int val){
@@ -298,10 +443,12 @@ namespace Logic
 		
 		void SetBuffName(){
 			v.name_buff = v.name;
+			//cout<<"my var "<<v.name_buff<<endl;
 			v.buff_addr = FindVarVal(v.name_buff);
+			//cout<<"my addr "<<v.buff_addr<<endl;
 		}
 		void PushBuffAddr(){
-			opcodes.push_back(v.buff_addr);
+					opcodes.push_back(v.buff_addr);
 		}
 		
 		void SetOp(vector<int> opcode){
@@ -311,8 +458,8 @@ namespace Logic
 		void SetMath(int val){
 			SetFlag(0);
 			math_reverse_form.push_back(val);
-			cout<<"=========================="<<endl;
-			cout<<math_reverse_form.back()<<endl;
+			//cout<<"=========================="<<endl;
+			//cout<<math_reverse_form.back()<<endl;
 		}
 		//установка опкодов математических операций
 		void SetSignStruct(int plus, int minus, int multi, int div){
@@ -345,8 +492,8 @@ namespace Logic
 					math_reverse_form.push_back(s.DIV);
 					break;
 			}
-			cout<<"=========================="<<endl;
-			cout<<math_reverse_form.back()<<endl;
+			//cout<<"=========================="<<endl;
+			//cout<<math_reverse_form.back()<<endl;
 		}
 		
 		//доступ к словарю переменных
@@ -363,8 +510,8 @@ namespace Logic
 		}
 		//проверка номера операнда и определения типа (переменная или число) по флагу
 		void CheckSetTerm(int num){
-			cout<<"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"<<endl;
-			cout<< var_flag<<endl;
+			//cout<<"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"<<endl;
+			//cout<< var_flag<<endl;
 			switch(num){
 				case 1:
 					op_term.first = var_flag;
@@ -376,8 +523,8 @@ namespace Logic
 			//var_flag = 0;
 		}
 		void CheckSetFactor(int num){
-			cout<<"######################"<<endl;
-			cout<< var_flag<<endl;
+			//cout<<"######################"<<endl;
+			//cout<< var_flag<<endl;
 			switch(num){
 				case 1:
 					op_factor.first = var_flag;
@@ -424,40 +571,77 @@ namespace Logic
 				}				
 			}
 		}
-		
-		
 		//ахождение адреса переменной
 		int FindVarVal(str_t val){
-			auto map<str_t,int>::iterator it = var_v.find(val);
-			if(it != var_v.end()){
+			auto map<str_t,int>::iterator it, end;
+			vector<str_t>::iterator it_param, begin, par_end;
+			switch(v.funcType){
+				case 0:
+					it = var_v.find(val);
+					end = var_v.end();
+					break;
+				case 1:
+					it = func_v.find(val);
+					end = func_v.end();
+					par_end = f.func_param.end();
+					begin = f.func_param.begin();
+					it_param = find(begin, par_end, val);
+					break;
+			}
+			if(it != end){
+				//cout<<"~~~ "<<it->second<<" ~~~"<<endl;
 				return (it->second);
 				}
+			else if(it_param!=par_end){
+				//PushOpcode(0x3000);
+				//PushOpcode(0x00AF);
+				
+				int paramNum = it_param - begin+1;
+				//PushOpcode(0x00B0+paramNum);
+				//math_reverse_form.push_back(0x00AF);
+				
+				//math_reverse_form.push_back(0x00B3);
+				return 0x188A0+paramNum;
+				//PushOpcode(paramNum);
+			}
 			else{
 				return -1;
 			}
 		}
 		//запись адреса переменной в вектор опкодов
-		void PushAddr(std::string val){
-			opcodes.push_back(FindVarVal(val));
-		}
+//		void PushAddr(std::string val){
+//					opcodes.push_back(FindVarVal(val));
+//					//opcodes.push_back(FindVarVal(val));
+//		}
 		//запись опкода в вектор
 		void PushOpcode(int opcode){
 			opcodes.push_back(opcode);			
 		}
 		//
-		void PushOperation(){
-			while(math_reverse_form.size()!=0){
-				opcodes.push_back(math_reverse_form.back());	
-				math_reverse_form.pop_back();	
-			}
-		}
+//		void PushOperation(){
+//			while(math_reverse_form.size()!=0){
+//				opcodes.push_back(math_reverse_form.back());	
+//				cout<<std::hex<<"take param:  "<<math_reverse_form.back()<<endl;
+//				math_reverse_form.pop_back();	
+//			}
+//		}
 		//установка флага переменная-число и запись адреса в вектор с ОПЗ
 		void PushName(){
 			SetFlag(1);
+			switch(v.funcType){
+				case 0:
+					math_reverse_form.push_back(FindVarVal(v.name));	
+					//opcodes.push_back(v.buff_addr);
+			//		opcodes.push_back(FindVarVal(val));
+					break;
+				case 1:
+					math_reverse_form.push_back(FindVarVal(v.name));	
+					//FindVarVal(v.name_buff);
+					break;
+			}
 			//int index = FindVarVal(v.name)/sizeof(size_opcode) - 3;
-			math_reverse_form.push_back(FindVarVal(v.name));	
-			cout<<"=========================="<<endl;
-			cout<<math_reverse_form.back()<<endl;
+			//cout<<"=========================="<<endl;
+			//cout<<math_reverse_form.back()<<endl;
 		}
 
 		//запись в вектор опкодов числа
@@ -468,18 +652,30 @@ namespace Logic
 		//добавление в словарь записи типа Имя_переменной, адрес
 		void PushVar()
 		{
+			cout<<"===== "<<v.funcType<<" ======="<<endl;
 			int addr = (4 + opcodes.size()-1)*sizeof(size_opcode);
 			SetAddr(addr);
-			var_v.insert(pair<str_t,int>(v.name, v.addr));
+			cout<<v.name<<" "<<v.addr<<endl;
+			switch(v.funcType){
+					case 0:
+						var_v.insert(pair<str_t,int>(v.name, v.addr));
+						break;
+					case 1:
+						func_v.insert(pair<str_t,int>(v.name, v.addr));
+						break;
+			}
 		}
 		void Resolve(){
 			int a,i=0;
 			vector<int>::iterator it = math_reverse_form.begin();
 			while(it!=math_reverse_form.end()){
-				cout<<std::hex<<(*it)<< " ";
+				//cout<<std::hex<<(*it)<< " ";
 				if(CheckOperation((*it))){
 					stack.push_back((*it));
 					it++;
+				}
+				else if(*it == 0x00AF){
+						
 				}
 				else{
 					//if(i==0){
@@ -500,7 +696,7 @@ namespace Logic
 					
 				}
 			}
-			cout<<"~~~~~~~ "<<FindVarVal(v.name_buff)<<" ~~~~~~~~"<<endl;
+			//cout<<"~~~~~~~ "<<FindVarVal(v.name_buff)<<" ~~~~~~~~"<<endl;
 			math_reverse_form.clear();
 		}
 		bool CheckOperation(int val){
