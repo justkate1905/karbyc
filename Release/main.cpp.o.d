@@ -1587,32 +1587,13 @@ Release/main.cpp.o: main.cpp RulesGrammar.h \
  C:/boost_1_53_0/boost/spirit/home/phoenix/stl.hpp \
  C:/boost_1_53_0/boost/spirit/home/phoenix/stl/algorithm.hpp \
  C:/boost_1_53_0/boost/spirit/home/phoenix/stl/container.hpp \
- C:/boost_1_53_0/boost/fusion/include/adapt_struct.hpp \
- C:/boost_1_53_0/boost/fusion/adapted/struct/adapt_struct.hpp \
- C:/boost_1_53_0/boost/fusion/adapted/struct/detail/extension.hpp \
- C:/boost_1_53_0/boost/fusion/adapted/struct/detail/adapt_base.hpp \
- C:/boost_1_53_0/boost/fusion/adapted/struct/detail/at_impl.hpp \
- C:/boost_1_53_0/boost/fusion/adapted/struct/detail/is_view_impl.hpp \
- C:/boost_1_53_0/boost/fusion/adapted/struct/detail/is_sequence_impl.hpp \
- C:/boost_1_53_0/boost/fusion/adapted/struct/detail/value_at_impl.hpp \
- C:/boost_1_53_0/boost/fusion/adapted/struct/detail/category_of_impl.hpp \
- C:/boost_1_53_0/boost/fusion/adapted/struct/detail/size_impl.hpp \
- C:/boost_1_53_0/boost/fusion/adapted/struct/detail/begin_impl.hpp \
- C:/boost_1_53_0/boost/fusion/iterator/basic_iterator.hpp \
- C:/boost_1_53_0/boost/fusion/adapted/struct/detail/end_impl.hpp \
- C:/boost_1_53_0/boost/fusion/adapted/struct/detail/value_of_impl.hpp \
- C:/boost_1_53_0/boost/fusion/adapted/struct/detail/deref_impl.hpp \
- C:/boost_1_53_0/boost/spirit/include/support_utree.hpp \
- C:/boost_1_53_0/boost/spirit/home/support/utree.hpp \
- C:/boost_1_53_0/boost/spirit/home/support/utree/utree.hpp \
- C:/boost_1_53_0/boost/io/ios_state.hpp C:/boost_1_53_0/boost/io_fwd.hpp \
- C:/boost_1_53_0/boost/type_traits/is_polymorphic.hpp \
- C:/boost_1_53_0/boost/spirit/home/support/utree/detail/utree_detail1.hpp \
- C:/boost_1_53_0/boost/spirit/home/support/utree/operators.hpp \
- C:/boost_1_53_0/boost/spirit/home/support/utree/detail/utree_detail2.hpp \
- C:/boost_1_53_0/boost/spirit/home/support/utree/utree_traits.hpp \
- C:/boost_1_53_0/boost/spirit/home/karma/domain.hpp \
- C:/boost_1_53_0/boost/spirit/home/karma/nonterminal/nonterminal_fwd.hpp
+ C:/boost_1_53_0/boost/spirit/include/qi_char_class.hpp \
+ C:/boost_1_53_0/boost/locale/encoding_utf.hpp \
+ C:/boost_1_53_0/boost/locale/utf.hpp \
+ C:/boost_1_53_0/boost/locale/encoding_errors.hpp \
+ C:/boost_1_53_0/boost/locale/definitions.hpp \
+ C:/boost_1_53_0/boost/spirit/include/qi_lexeme.hpp \
+ C:/boost_1_53_0/boost/spirit/include/qi_raw.hpp
 
 RulesGrammar.h:
 
@@ -4832,56 +4813,16 @@ C:/boost_1_53_0/boost/spirit/home/phoenix/stl/algorithm.hpp:
 
 C:/boost_1_53_0/boost/spirit/home/phoenix/stl/container.hpp:
 
-C:/boost_1_53_0/boost/fusion/include/adapt_struct.hpp:
+C:/boost_1_53_0/boost/spirit/include/qi_char_class.hpp:
 
-C:/boost_1_53_0/boost/fusion/adapted/struct/adapt_struct.hpp:
+C:/boost_1_53_0/boost/locale/encoding_utf.hpp:
 
-C:/boost_1_53_0/boost/fusion/adapted/struct/detail/extension.hpp:
+C:/boost_1_53_0/boost/locale/utf.hpp:
 
-C:/boost_1_53_0/boost/fusion/adapted/struct/detail/adapt_base.hpp:
+C:/boost_1_53_0/boost/locale/encoding_errors.hpp:
 
-C:/boost_1_53_0/boost/fusion/adapted/struct/detail/at_impl.hpp:
+C:/boost_1_53_0/boost/locale/definitions.hpp:
 
-C:/boost_1_53_0/boost/fusion/adapted/struct/detail/is_view_impl.hpp:
+C:/boost_1_53_0/boost/spirit/include/qi_lexeme.hpp:
 
-C:/boost_1_53_0/boost/fusion/adapted/struct/detail/is_sequence_impl.hpp:
-
-C:/boost_1_53_0/boost/fusion/adapted/struct/detail/value_at_impl.hpp:
-
-C:/boost_1_53_0/boost/fusion/adapted/struct/detail/category_of_impl.hpp:
-
-C:/boost_1_53_0/boost/fusion/adapted/struct/detail/size_impl.hpp:
-
-C:/boost_1_53_0/boost/fusion/adapted/struct/detail/begin_impl.hpp:
-
-C:/boost_1_53_0/boost/fusion/iterator/basic_iterator.hpp:
-
-C:/boost_1_53_0/boost/fusion/adapted/struct/detail/end_impl.hpp:
-
-C:/boost_1_53_0/boost/fusion/adapted/struct/detail/value_of_impl.hpp:
-
-C:/boost_1_53_0/boost/fusion/adapted/struct/detail/deref_impl.hpp:
-
-C:/boost_1_53_0/boost/spirit/include/support_utree.hpp:
-
-C:/boost_1_53_0/boost/spirit/home/support/utree.hpp:
-
-C:/boost_1_53_0/boost/spirit/home/support/utree/utree.hpp:
-
-C:/boost_1_53_0/boost/io/ios_state.hpp:
-
-C:/boost_1_53_0/boost/io_fwd.hpp:
-
-C:/boost_1_53_0/boost/type_traits/is_polymorphic.hpp:
-
-C:/boost_1_53_0/boost/spirit/home/support/utree/detail/utree_detail1.hpp:
-
-C:/boost_1_53_0/boost/spirit/home/support/utree/operators.hpp:
-
-C:/boost_1_53_0/boost/spirit/home/support/utree/detail/utree_detail2.hpp:
-
-C:/boost_1_53_0/boost/spirit/home/support/utree/utree_traits.hpp:
-
-C:/boost_1_53_0/boost/spirit/home/karma/domain.hpp:
-
-C:/boost_1_53_0/boost/spirit/home/karma/nonterminal/nonterminal_fwd.hpp:
+C:/boost_1_53_0/boost/spirit/include/qi_raw.hpp:

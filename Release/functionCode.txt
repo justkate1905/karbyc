@@ -5,18 +5,28 @@ deff one(s){
 
 deff two(a,b,s){
 	var hello, c=9;
+	one(5);	
 	hello = a*4;
 	return hello;
 }
 
+deff doubleMult(a){
+	return a*a;
+}
+
 start(){
-	var a = 5,b,c, result;
+	var a = 5,b,c, result, var_sqr;
 	b = (a+3+2)*2;
 	c = (b+2*5)/(a+3*2-4);
 	a = 3-b;
+	var_sqr = a;
 	one(4);
 	result = two(a,3,4);
+	var_sqr = doubleMult(a);
+	out "result ";
 	out result;
+	out "var_sqrt ";
+	out var_sqr;
 	out a;
 	out b;
 	out c;

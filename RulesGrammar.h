@@ -66,6 +66,7 @@ namespace Logic
 	struct operand{
 		int first;
 		int second;
+		int num_of_op=0;
 	};
 	
 	
@@ -88,13 +89,13 @@ namespace Logic
 		//мат.операции
 		signs s;
 		//операнды
-		operand op_term, op_factor;
+		operand op_term, op_factor, operands;
 		//переменные для хранения значения переменных, типа данных и флага переменная-число
 		int num=0, type = 0x00AB, var_flag=0, buff_flag=0, count_op = 0;
 		
 		std::string var_name = " ", math_exp, str_value, sign, name1;
 		//вектор кодов операций
-		vector <size_opcode> opcodes;
+		vector <size_opcode> opcodes, addr_stack;
 		vector<int> stack, var_stack; 
 		//словарь всех переменных
 		map<str_t, int> var_v;
@@ -108,7 +109,7 @@ namespace Logic
 											uint_bind, double_bind,expression, term,factor,cond,start_prog, 
 											condition, operations, stream, init,id,strings, functionName,
 											func_defenition, global_prog, param,return_val, call_function,
-											assoc, give_param, int_p;
+											assoc, give_param, int_p, return_simple, return_op, variable_name;
 
 	public:
 		RulesGrammar() : RulesGrammar::base_type(global_prog)
@@ -121,18 +122,22 @@ namespace Logic
 								
 				func_defenition = qi::lit("deff")[boost::bind(&RulesGrammar::SetType, this,1)]>>
 											functionName[boost::bind(&RulesGrammar::SetFuncProperty, this)] >> '('>> 
-											(-(param % ',' ))[boost::bind(&RulesGrammar::PushParam, this)]	>>')'>>'{'>>
-											programm[boost::bind(&RulesGrammar::PushFuncVars, this)] >>
-											(-(return_val))>>qi::lit('}')[boost::bind(&RulesGrammar::PushOpcode, this, 0x01B0)]
+											(-(param % ',' ))[boost::bind(&RulesGrammar::PushParam, this)]	>>')'>>'{'>>(-(
+											programm[boost::bind(&RulesGrammar::PushFuncVars, this)])) >>
+											(-(return_op))>>qi::lit('}')[boost::bind(&RulesGrammar::PushOpcode, this, 0x01B0)]
 														[boost::bind(&RulesGrammar::PushCodeSize,this)];
-				return_val  = qi::lit("return")>>(name [boost::bind(&RulesGrammar::PushOpcode,this, 0x01B5)]
-														[boost::bind(&RulesGrammar::SetBuffName,this)]
-														[boost::bind(&RulesGrammar::PushBuffAddr,this)]
-												|expression[boost::bind(&RulesGrammar::PushOpcode,this, 0x01B4)]
-													[boost::bind(&RulesGrammar::PushOpcode,this, 0x00AA)]
-												| int_[boost::bind(&RulesGrammar::PushOpcode,this, 0x01B3)]
-														[phx::bind(&RulesGrammar::PushOpcode, this, qi::_1)])
+				return_op  =(qi::lit("return")>>return_val | return_simple)
 												>>qi::lit(';');
+				return_val =   call_function[boost::bind(&RulesGrammar::PushOpcode,this, 0x01B4)]
+									[boost::bind(&RulesGrammar::PushOpcode,this, 0x01B7)]|
+								expression[boost::bind(&RulesGrammar::Resolve, this)]
+										[boost::bind(&RulesGrammar::CheckAddrStackForMath, this)];
+				return_simple =  qi::lit("return")>> name[boost::bind(&RulesGrammar::PushOpcode,this, 0x01B5)]
+									[boost::bind(&RulesGrammar::SetBuffName,this)]
+									[boost::bind(&RulesGrammar::PushBuffAddr,this)] |
+								int_[boost::bind(&RulesGrammar::PushOpcode,this, 0x01B3)]
+									[phx::bind(&RulesGrammar::PushOpcode, this, qi::_1)];
+									
 				functionName = qi::as_string[+(qi::alpha|'_')>> *(qi::alnum|'_')]
 								[phx::bind(&RulesGrammar::SetFunctionName, this, qi::_1)];
 								
@@ -170,11 +175,13 @@ namespace Logic
 												|
 												expression
 												[boost::bind(&RulesGrammar::Resolve, this)]
-												[boost::bind(&RulesGrammar::PushOpcode, this, 0x3001)]
-												[boost::bind(&RulesGrammar::PushBuffAddr, this)]
-												[boost::bind(&RulesGrammar::PushOpcode, this, 0x00AA)]
+												[boost::bind(&RulesGrammar::CheckAddrStack, this)]
+												//[boost::bind(&RulesGrammar::PushOpcode, this, 0x3001)]
+												//[boost::bind(&RulesGrammar::PushBuffAddr, this)]
+												//[boost::bind(&RulesGrammar::PushOpcode, this, 0x00AA)]
 												));
-				assoc = (qi::lit('=')>> (name 
+				assoc = name[boost::bind(&RulesGrammar::SetBuffName, this)]
+						>> (qi::lit('=') >> (name 
 										[boost::bind(&RulesGrammar::PushOpcode, this, 0x3000)]
 										[boost::bind(&RulesGrammar::PushBuffAddr, this)]
 										[boost::bind(&RulesGrammar::SetBuffName, this)]
@@ -186,9 +193,7 @@ namespace Logic
 				//определение инициалзируемого значения
 				binding = ( uint_bind|double_bind |qi::lit('"') 
 								[boost::bind(&RulesGrammar::TakeStack, this, 0x00AC)]
-							>> strings
-											//[boost::bind(&RulesGrammar::Increase, this)]
-											>>'"');
+							>> strings>>'"');
 				//беззнаковое целое
 				uint_bind = int_[boost::bind(&RulesGrammar::TakeStack, this, 0x00AB)]
 							[boost::bind(&RulesGrammar::PushOpcode, this, this->v.var_num)]
@@ -203,7 +208,7 @@ namespace Logic
 
 				//виды возможных команд
 				//условия, математические операции, операции вывода
-				start_prog = *((condition | stream |operations | call_function >>';'));
+				start_prog = *((condition | stream | operations| assoc | call_function >>';'));
 				//строковое значение
 				strings = qi::as_string[lexeme[*(qi::char_ - qi::char_('"'))]]
 								[phx::bind(&RulesGrammar::Convert, this, qi::_1)];
@@ -223,39 +228,46 @@ namespace Logic
 							>> strings
 								>>'"') )
 						  >> ';';
+				variable_name = qi::as_string[+(qi::alpha|'_')>> *(qi::alnum|'_')]
+						[phx::bind(&RulesGrammar::SetName, this, qi::_1)];
 				//математические операции
-				operations = name [boost::bind(&RulesGrammar::SetBuffName, this)] >> (associate | assoc) >>';';
+				operations = name [boost::bind(&RulesGrammar::SetBuffName, this)] >> (associate) >>';';
 				//условия
 				condition = qi::lit("if")>>'('>>cond>>')'>>qi::char_('{')>>start_prog >> '}';
 				//условные выражения
 				cond = name >> ((('>'|qi::lit(">=")|'<'|qi::lit("<="))>>(int_|double_))|"==">>(int_|double_|('"'>>*(qi::char_)>>'"'))); 
 				//парсинг математических выражений
-				expression = term [boost::bind(&RulesGrammar::CheckSetTerm, this,1)]  >> 
-							*((qi::char_('-') >> term[boost::bind(&RulesGrammar::CheckSetTerm, this,2)])
+				expression = term [boost::bind(&RulesGrammar::CheckSetTerm, this,1)]
+									  >> 
+							*((qi::char_('-') >> term[boost::bind(&RulesGrammar::CheckSetTerm, this,2)]
+												)
 									[boost::bind(&RulesGrammar::SetSign, this, 1,2)]
 									[boost::bind(&RulesGrammar::SetFlag, this,0)]  
 									[boost::bind(&RulesGrammar::CheckSetTerm, this,1)]
 									[boost::bind(&RulesGrammar::CheckAndSetOpcodeTerm, this)]
-							| (qi::char_('+') >> term [boost::bind(&RulesGrammar::CheckSetTerm, this, 2)]) 
+							| (qi::char_('+') >> term [boost::bind(&RulesGrammar::CheckSetTerm, this, 2)]
+												) 
 									[boost::bind(&RulesGrammar::SetSign, this, 0,2)]
 									[boost::bind(&RulesGrammar::SetFlag, this,0)]
 									[boost::bind(&RulesGrammar::CheckSetTerm, this,1)]
 									[boost::bind(&RulesGrammar::CheckAndSetOpcodeTerm, this)]);
                 //обработка умножения и деления
 				term       =  factor[boost::bind(&RulesGrammar::CheckSetFactor, this,1)]
+									
 									>> 
 							*( ('*' >> factor[boost::bind(&RulesGrammar::CheckSetFactor, this,2)])
 										[boost::bind(&RulesGrammar::SetSign, this, 2,1)] 
 										[boost::bind(&RulesGrammar::SetFlag, this,0)]
-
 							| ('/' >> factor[boost::bind(&RulesGrammar::CheckSetFactor, this,2)] )
 										[boost::bind(&RulesGrammar::SetSign, this, 3,1)]
-										[boost::bind(&RulesGrammar::SetFlag, this,0)]);
+										[boost::bind(&RulesGrammar::SetFlag, this,0)]
+										[boost::bind(&RulesGrammar::Increase, this)]);
 										
 				factor     = (name[boost::bind(&RulesGrammar::PushName, this)]
+									[boost::bind(&RulesGrammar::AddrToStack, this)]
 									[boost::bind(&RulesGrammar::SetBuffFlag, this, 1)]
 							| qi::uint_[phx::bind(&RulesGrammar::SetMath, this, qi::_1)]
-                           |  '(' >> expression >> ')' );
+                           |  '(' >> expression >> ')' )[boost::bind(&RulesGrammar::Increase, this)];
 		}
 		//установка числового значения
 		void SetNum(int i){
@@ -289,7 +301,47 @@ namespace Logic
 			PushOpcode(0);
 			f.param = 0;
 		} 
-		
+		void CheckAddrStack(){
+			if(operands.num_of_op>1){
+				cout<<"num of op "<<operands.num_of_op<<endl;
+				operands.num_of_op = 0;
+				PushOpcode(0x3001);
+				PushBuffAddr();
+				PushOpcode(0x00AA);
+			//[boost::bind(&RulesGrammar::PushOpcode, this, 0x3001)]
+			//[boost::bind(&RulesGrammar::PushBuffAddr, this)]
+			//[boost::bind(&RulesGrammar::PushOpcode, this, 0x00AA)]
+			}
+			else{
+				cout<<"num of op in "<<operands.num_of_op<<endl;
+				operands.num_of_op = 0;
+				PushOpcode(0x3000);
+				PushBuffAddr();
+				cout<<std::hex<<"addr "<<addr_stack.back()<<endl;
+				PushOpcode(addr_stack.back());
+				addr_stack.pop_back();
+			}
+			addr_stack.clear();
+			//operands.num_of_op = 0;
+		}
+		void CheckAddrStackForMath(){
+			cout<<"num of op "<<operands.num_of_op<<endl;
+			if(operands.num_of_op>1){
+				PushOpcode(0x01B4);
+				PushOpcode(0x00AA);
+			//[boost::bind(&RulesGrammar::PushOpcode, this, 0x3001)]
+			//[boost::bind(&RulesGrammar::PushBuffAddr, this)]
+			//[boost::bind(&RulesGrammar::PushOpcode, this, 0x00AA)]
+			}
+			else{
+				PushOpcode(0x01B5);
+				cout<<std::hex<<"addr "<<addr_stack.back()<<endl;
+				PushOpcode(addr_stack.back());
+				
+			}
+			addr_stack.clear();
+			operands.num_of_op = 0;
+		}
 		void FuncReview(){
 			vector<func_service>::iterator beg = function_list.begin(), end = function_list.end();
 			vector<size_opcode>::iterator it = params.begin(), end_p = params.end();
@@ -326,7 +378,7 @@ namespace Logic
 		}
 		
 		void Increase(){
-			v.var_num++;
+			operands.num_of_op++;
 		}
 		void IncreaseParam(){
 			f.param++;
@@ -422,6 +474,7 @@ namespace Logic
 			f.func_num++;
 			f.funcId = 0x00A1 + 0x0100*(f.func_num);
 			PushOpcode(f.funcId);
+			cout<<"func id "<<std::hex<<opcodes.back()<<endl;
 			f.addr = (4 + opcodes.size()-1)*sizeof(size_opcode);
 			serv.addr = f.addr;
 			serv.name = f.func_name;
@@ -445,10 +498,18 @@ namespace Logic
 			v.name_buff = v.name;
 			//cout<<"my var "<<v.name_buff<<endl;
 			v.buff_addr = FindVarVal(v.name_buff);
+			//AddrToStack();
 			//cout<<"my addr "<<v.buff_addr<<endl;
 		}
 		void PushBuffAddr(){
-					opcodes.push_back(v.buff_addr);
+			opcodes.push_back(v.buff_addr);
+			//addr_stack.pop_back();
+		}
+		void AddrToStack(){
+			addr_stack.push_back(FindVarVal(v.name));
+		}
+		void PopAddrfromStack(){
+			addr_stack.pop_back();
 		}
 		
 		void SetOp(vector<int> opcode){
@@ -628,17 +689,7 @@ namespace Logic
 		//установка флага переменная-число и запись адреса в вектор с ОПЗ
 		void PushName(){
 			SetFlag(1);
-			switch(v.funcType){
-				case 0:
-					math_reverse_form.push_back(FindVarVal(v.name));	
-					//opcodes.push_back(v.buff_addr);
-			//		opcodes.push_back(FindVarVal(val));
-					break;
-				case 1:
-					math_reverse_form.push_back(FindVarVal(v.name));	
-					//FindVarVal(v.name_buff);
-					break;
-			}
+			math_reverse_form.push_back(FindVarVal(v.name));	
 			//int index = FindVarVal(v.name)/sizeof(size_opcode) - 3;
 			//cout<<"=========================="<<endl;
 			//cout<<math_reverse_form.back()<<endl;
@@ -698,6 +749,7 @@ namespace Logic
 			}
 			//cout<<"~~~~~~~ "<<FindVarVal(v.name_buff)<<" ~~~~~~~~"<<endl;
 			math_reverse_form.clear();
+			//operands.num_of_op=0;
 		}
 		bool CheckOperation(int val){
 			if(val!=0x1000 && val!=0x1001 && val!=0x1002 && val!=0x1003 && val!=0x1004 && val!=0x1005&&val!=0x1006&&val!=0x1007&&val!=0x1008&&val!=0x1009&&val!=0x100A&&val!=0x100B&&val!=0x100C&&val!=0x100D&&val!=0x100E&&val!=0x100F){
